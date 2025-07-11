@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Plataforma PDF</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pVxP+7LthI/XE3v+Z4tUt6S1uhBqj3MtgV9EKFGf/Gr9k5QfvGcNcGfQ3EWUNR8n1L7jAq+J3DkDwN0EKnEVDA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -148,28 +149,66 @@
         padding: 15px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
+
+        .filters-container {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        }
+
+        .filter-input {
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 1rem;
+        flex-grow: 1; /* Que ocupen todo lo posible en línea */
+        min-width: 150px;
+        }
+
+        .btn-filter {
+        background-color: #9b2247;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        cursor: pointer;
+        border-radius: 5px;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+        white-space: nowrap;
+        }
+
+        .btn-filter:hover {
+        background-color: #611232;
+        }
+
+        a i, button i {
+            margin-right: 6px;
+        }
+
     </style>
 </head>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <body>
     <header>
         <h1>Plataforma de Documentos Oficiales</h1>
     </header>
     <nav>
         {% if user.is_authenticated %}
-            <a href="{% url 'catalog' %}">Catálogo</a>
+            <a href="{% url 'catalog' %}"><i class="fas fa-book"></i> Catálogo</a>
             {% if user.is_staff %}
-            <a href="{% url 'user_logs' %}">Registros de usuarios</a>
-            <a href="{% url 'upload_pdf' %}">Subir PDF</a>
+                <a href="{% url 'user_logs' %}"><i class="fas fa-users"></i> Registros de usuarios</a>
+                <a href="{% url 'upload_pdf' %}"><i class="fas fa-upload"></i> Subir PDF</a>
             {% endif %}
             <form method="post" action="{% url 'logout' %}" style="display: inline;">
                 {% csrf_token %}
-                <button type="submit">Cerrar sesión</button>
+                <button type="submit"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</button>
             </form>
         {% else %}
-            <a href="{% url 'login' %}">Iniciar sesión</a>
+            <a href="{% url 'login' %}"><i class="fas fa-sign-in-alt"></i> Iniciar sesión</a>
         {% endif %}
         {% if not user.is_authenticated %}
-            <a href="{% url 'register' %}">Registrarse</a>
+            <a href="{% url 'register' %}"><i class="fas fa-user-plus"></i> Registrarse</a>
         {% endif %}
     </nav>
     <div class="container">

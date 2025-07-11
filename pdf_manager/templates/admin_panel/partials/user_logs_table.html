@@ -1,26 +1,32 @@
+{% load tz %}
+
 <table border="1" cellpadding="8" cellspacing="0" style="width:100%; border-collapse: collapse;">
     <thead>
         <tr>
-            <th>ID</th>
             <th>Usuario</th>
             <th>PDF</th>
             <th>Acción</th>
             <th>Fecha y hora</th>
             <th>Dirección IP</th>
+            <th>Navegador</th>
+            <th>Sistema Operativo</th>
+            <th>Dispositivo</th>
         </tr>
     </thead>
     <tbody>
         {% for log in page_obj %}
         <tr>
-            <td>{{ log.id }}</td>
             <td>{{ log.user.username }}</td>
             <td>{{ log.pdf.title }}</td>
             <td>{{ log.action }}</td>
-            <td>{{ log.accessed_at }}</td>
+            <td>{{ log.accessed_at|timezone:"America/Mexico_City" }}</td>
             <td>{{ log.ip_address }}</td>
+            <td>{{ log.browser }}</td>
+            <td>{{ log.os }}</td>
+            <td>{{ log.device }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="6">No hay registros.</td></tr>
+        <tr><td colspan="8">No hay registros.</td></tr>
         {% endfor %}
     </tbody>
 </table>
@@ -28,21 +34,21 @@
 <div style="margin-top:20px;">
     <div class="pagination">
       {% if page_obj.has_previous %}
-        <a href="?page=1">&laquo; Primera</a>
-        <a href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+        <a href="?page=1&user={{ user_filter }}&action={{ action_filter }}">&laquo; Primera</a>
+        <a href="?page={{ page_obj.previous_page_number }}&user={{ user_filter }}&action={{ action_filter }}">Anterior</a>
       {% endif %}
 
       {% for num in page_obj.paginator.page_range %}
         {% if num == page_obj.number %}
           <strong>{{ num }}</strong>
         {% elif num >= page_obj.number|add:'-2' and num <= page_obj.number|add:'2' %}
-          <a href="?page={{ num }}">{{ num }}</a>
+          <a href="?page={{ num }}&user={{ user_filter }}&action={{ action_filter }}">{{ num }}</a>
         {% endif %}
       {% endfor %}
 
       {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}">Siguiente</a>
-        <a href="?page={{ page_obj.paginator.num_pages }}">Última &raquo;</a>
+        <a href="?page={{ page_obj.next_page_number }}&user={{ user_filter }}&action={{ action_filter }}">Siguiente</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}&user={{ user_filter }}&action={{ action_filter }}">Última &raquo;</a>
       {% endif %}
     </div>
 </div>

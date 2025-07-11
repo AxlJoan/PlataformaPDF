@@ -1,4 +1,5 @@
 import os
+from user_agents import parse
 from .models import AccessLog
 from .models import PDFDocument
 from django.conf import settings
@@ -37,9 +38,19 @@ def viewer_view(request, pdf_id):
     pdf = get_object_or_404(PDFDocument, id=pdf_id)
     
     ip = get_client_ip(request)  # Obtener IP
+    user_agent = request.META.get('HTTP_USER_AGENT', '')
+    parsed_ua = parse(user_agent)
 
     # Guardar log de acceso
-    AccessLog.objects.create(user=request.user, pdf=pdf, action='view', ip_address=ip)
+    AccessLog.objects.create(
+        user=request.user,
+        pdf=pdf,
+        action='view',
+        ip_address=ip,
+        browser=parsed_ua.browser.family,
+        os=parsed_ua.os.family,
+        device=parsed_ua.device.family,
+    )
 
     return render(request, 'viewer/viewer.html', {'pdf': pdf})
 
@@ -97,7 +108,15 @@ def pdf_download(request, pdf_id):
 
     # Registrar el log
     ip = get_client_ip(request)
-    AccessLog.objects.create(user=request.user, pdf=pdf, action='download', ip_address=ip)
+    user_agent = request.META.get('HTTP_USER_AGENT', '')
+    parsed_ua = parse(user_agent)
+    AccessLog.objects.create(user=request.user, 
+                             pdf=pdf, 
+                             action='download', 
+                             ip_address=ip,
+                             browser=parsed_ua.browser.family,
+                             os=parsed_ua.os.family,
+                             device=parsed_ua.device.family,)
 
     # Descargar
     response = FileResponse(open(pdf_path, 'rb'), content_type='application/pdf')
@@ -106,10 +125,15 @@ def pdf_download(request, pdf_id):
 
 from django.db.models import Count
 from django.db.models.functions import ExtractHour
+from django.core.paginator import Paginator
+from django.template.loader import render_to_string
+from django.http import JsonResponse
+from django.contrib.admin.views.decorators import staff_member_required
 
+@staff_member_required
 def user_logs(request):
     logs = AccessLog.objects.select_related('user', 'pdf').order_by('-accessed_at')
-    
+
     # Filtros opcionales (usuario, acción)
     user_filter = request.GET.get('user', '')
     action_filter = request.GET.get('action', '')
@@ -118,6 +142,17 @@ def user_logs(request):
         logs = logs.filter(user__username__icontains=user_filter)
     if action_filter:
         logs = logs.filter(action=action_filter)
+
+    paginator = Paginator(logs, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Para AJAX solo renderizamos la tabla (partial)
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        html = render_to_string('admin_panel/partials/user_logs_table.html', {
+            'page_obj': page_obj,
+        }, request=request)
+        return JsonResponse({'html': html})
 
     # Documentos más vistos
     top_docs = AccessLog.objects.values('pdf__title').annotate(total=Count('id')).order_by('-total')[:5]
@@ -138,16 +173,38 @@ def user_logs(request):
     action_counts = AccessLog.objects.values('action').annotate(total=Count('id'))
     action_data = [next((a['total'] for a in action_counts if a['action'] == 'view'), 0),
                    next((a['total'] for a in action_counts if a['action'] == 'download'), 0)]
+    
+    # Distribución por Navegador
+    browsers = AccessLog.objects.values('browser').annotate(total=Count('id')).order_by('-total')
+    browser_labels = [b['browser'] for b in browsers]
+    browser_data = [b['total'] for b in browsers]
+    
+    # Dispositivos Más Utilizados
+    devices = AccessLog.objects.values('device').annotate(total=Count('id')).order_by('-total')
+    device_labels = [d['device'] for d in devices]
+    device_data = [d['total'] for d in devices]
+    
+    # Sistemas Operativos Más Comunes
+    oses = AccessLog.objects.values('os').annotate(total=Count('id')).order_by('-total')
+    os_labels = [o['os'] for o in oses]
+    os_data = [o['total'] for o in oses]
 
-    paginator = Paginator(logs, 25)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    return render(request, 'admin_panel/user_logs.html', {
+    context = {
         'page_obj': page_obj,
-        'doc_labels': doc_labels, 'doc_data': doc_data,
-        'user_labels': user_labels, 'user_data': user_data,
-        'hour_labels': hour_labels, 'hour_data': hour_data,
+        'user_filter': user_filter,
+        'action_filter': action_filter,
+        'doc_labels': doc_labels,
+        'doc_data': doc_data,
+        'user_labels': user_labels,
+        'user_data': user_data,
+        'hour_labels': hour_labels,
+        'hour_data': hour_data,
         'action_data': action_data,
-    })
-
+        'browser_labels': browser_labels,
+        'browser_data': browser_data,
+        'device_labels': device_labels,
+        'device_data': device_data,
+        'os_labels': os_labels,
+        'os_data': os_data,
+    }
+    return render(request, 'admin_panel/user_logs.html', context)

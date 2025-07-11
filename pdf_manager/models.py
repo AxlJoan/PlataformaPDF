@@ -16,7 +16,10 @@ class AccessLog(models.Model):
     pdf = models.ForeignKey('PDFDocument', on_delete=models.CASCADE)
     action = models.CharField(max_length=20)  # 'view' o 'download'
     accessed_at = models.DateTimeField(auto_now_add=True)
-    ip_address = models.GenericIPAddressField(null=True, blank=True)  # <-- NUEVO CAMPO
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    browser = models.CharField(max_length=100, blank=True)
+    os = models.CharField(max_length=100, blank=True)
+    device = models.CharField(max_length=100, blank=True)
     country = models.CharField(max_length=100, blank=True, null=True)
     city = models.CharField(max_length=100, blank=True, null=True)
     latitude = models.FloatField(blank=True, null=True)

@@ -21,63 +21,68 @@
 </div>
 
 <h2>Registros de usuarios</h2>
-<form method="get" style="margin-bottom: 20px;">
-    <input type="text" name="user" placeholder="Buscar usuario" value="{{ user_filter }}">
-    <select name="action">
-        <option value="">Todas las acciones</option>
-        <option value="view" {% if action_filter == "view" %}selected{% endif %}>Visualización</option>
-        <option value="download" {% if action_filter == "download" %}selected{% endif %}>Descarga</option>
-    </select>
-    <button type="submit">Filtrar</button>
-</form>
+<div class="filters-container" style="max-width: 600px; margin-bottom: 20px;">
+  <input
+    type="text"
+    id="filter-user"
+    class="filter-input"
+    placeholder="Buscar usuario"
+    value="{{ user_filter }}"
+  />
 
-<table border="1" cellpadding="8" cellspacing="0" style="width:100%; border-collapse: collapse;">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Usuario</th>
-            <th>PDF</th>
-            <th>Acción</th>
-            <th>Fecha y hora</th>
-            <th>Dirección IP</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for log in page_obj %}
-        <tr>
-            <td>{{ log.id }}</td>
-            <td>{{ log.user.username }}</td>
-            <td>{{ log.pdf.title }}</td>
-            <td>{{ log.action }}</td>
-            <td>{{ log.accessed_at }}</td>
-            <td>{{ log.ip_address }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="5">No hay registros.</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+  <select id="filter-action" class="filter-input">
+    <option value="">Todas las acciones</option>
+    <option value="view" {% if action_filter == "view" %}selected{% endif %}>Visualización</option>
+    <option value="download" {% if action_filter == "download" %}selected{% endif %}>Descarga</option>
+  </select>
 
-<div style="margin-top:20px;">
-    <div class="pagination">
-  {% if page_obj.has_previous %}
-    <a href="?page=1">&laquo; Primera</a>
-    <a href="?page={{ page_obj.previous_page_number }}">Anterior</a>
-  {% endif %}
-
-  {% for num in page_obj.paginator.page_range %}
-    {% if num == page_obj.number %}
-      <strong>{{ num }}</strong>
-    {% elif num >= page_obj.number|add:'-2' and num <= page_obj.number|add:'2' %}
-      <a href="?page={{ num }}">{{ num }}</a>
-    {% endif %}
-  {% endfor %}
-
-  {% if page_obj.has_next %}
-    <a href="?page={{ page_obj.next_page_number }}">Siguiente</a>
-    <a href="?page={{ page_obj.paginator.num_pages }}">Última &raquo;</a>
-  {% endif %}
+  <button id="apply-filters" class="btn-filter">
+    <i class="fas fa-filter"></i> Aplicar filtros
+  </button>
 </div>
+
+<div id="logs-table-container">
+    {% include 'admin_panel/partials/user_logs_table.html' %}
+</div>
+
+<!-- El resto de tu contenido (gráficas, mapas, etc) aquí -->
+
+<script>
+function loadPage(url) {
+    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('logs-table-container').innerHTML = data.html;
+        attachPaginationListeners();
+    });
+}
+
+function attachPaginationListeners() {
+    document.querySelectorAll('.pagination a').forEach(link => {
+        link.onclick = function(e) {
+            e.preventDefault();
+            loadPage(this.href);
+        };
+    });
+}
+
+let debounceTimeout;
+document.getElementById('filter-user').addEventListener('input', function() {
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(() => {
+        let url = `/user-logs/?user=${encodeURIComponent(this.value)}&action=${encodeURIComponent(document.getElementById('filter-action').value)}`;
+        loadPage(url);
+    }, 400);
+});
+
+document.getElementById('filter-action').addEventListener('change', function() {
+    let url = `/user-logs/?user=${encodeURIComponent(document.getElementById('filter-user').value)}&action=${encodeURIComponent(this.value)}`;
+    loadPage(url);
+});
+
+// Inicializamos la paginación para que los enlaces funcionen
+attachPaginationListeners();
+</script>
 
 </div>
 <h2>Mapa de Ubicaciones</h2>
@@ -117,6 +122,20 @@
     });
 </script>
 
+</div>
+<div class="charts-grid">
+  <div class="chart-card">
+    <h3>Dispositivos más usados</h3>
+    <canvas id="devicesChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <h3>Navegadores más usados</h3>
+    <canvas id="browsersChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <h3>Sistemas Operativos más comunes</h3>
+    <canvas id="osesChart"></canvas>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -187,5 +206,72 @@ const docsChart = new Chart(ctx, {
 });
 </script>
 
+<script>
+document.getElementById('apply-filters').addEventListener('click', () => {
+  const user = encodeURIComponent(document.getElementById('filter-user').value.trim());
+  const action = encodeURIComponent(document.getElementById('filter-action').value);
+
+  let url = '?';
+  if (user) url += `user=${user}&`;
+  if (action) url += `action=${action}&`;
+
+  // Remueve último & si existe
+  url = url.slice(0, -1);
+
+  // Redirigir a la url con filtros
+  window.location.href = url;
+});
+</script>
+<script>
+let debounceTimeout;
+document.getElementById('filter-user').addEventListener('input', () => {
+  clearTimeout(debounceTimeout);
+  debounceTimeout = setTimeout(() => {
+    document.getElementById('apply-filters').click();
+  }, 600);
+});
+
+</script>
+
+<script>
+// Dispositivos Más Utilizados
+new Chart(document.getElementById('devicesChart'), {
+  type: 'pie',
+  data: {
+    labels: {{ device_labels|safe }},
+    datasets: [{
+      data: {{ device_data|safe }},
+      backgroundColor: ['#9b2247', '#611232', '#480e24', '#7e1a38', '#a8335a']
+    }]
+  },
+  options: { responsive: true }
+});
+
+// Navegadores Más Usados
+new Chart(document.getElementById('browsersChart'), {
+  type: 'pie',
+  data: {
+    labels: {{ browser_labels|safe }},
+    datasets: [{
+      data: {{ browser_data|safe }},
+      backgroundColor: ['#7e1a38', '#480e24', '#611232', '#9b2247', '#a8335a']
+    }]
+  },
+  options: { responsive: true }
+});
+
+// Sistemas Operativos Más Comunes
+new Chart(document.getElementById('osesChart'), {
+  type: 'pie',
+  data: {
+    labels: {{ os_labels|safe }},
+    datasets: [{
+      data: {{ os_data|safe }},
+      backgroundColor: ['#480e24', '#9b2247', '#611232', '#7e1a38', '#a8335a']
+    }]
+  },
+  options: { responsive: true }
+});
+</script>
 
 {% endblock %}
