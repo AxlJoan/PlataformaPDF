@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 style="color:#611232; margin-bottom: 20px;">Catálogo de PDFs</h1>
+<ul class="pdf-list">
+    {% for pdf in pdfs %}
+    <li>
+        <a href="{% url 'viewer' pdf.id %}" class="pdf-link">{{ pdf.title }}</a>
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}

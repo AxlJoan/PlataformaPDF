@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Plataforma PDF</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #611232;  /* Antes #003366 */
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+        nav {
+            background-color: #9b2247;  /* Antes #005ea8 */
+            padding: 10px;
+            text-align: right;
+        }
+        /* Estilos para links en nav */
+        nav a {
+            color: white;
+            margin: 0 10px;
+            text-decoration: none;
+            font-weight: bold;
+            background-color: #551129;  /* Nuevo background */
+            padding: 7px 14px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        nav a:hover {
+            background-color: #480e24;  /* Oscurecer en hover */
+        }
+        .container {
+            padding: 30px;
+        }
+        button {
+            background-color: #9b2247;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #611232;
+        }
+        /* Inputs y selects igual, para mantener uniformidad */
+        form input, form select, form textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        /* Lista catálogo */
+        .pdf-list {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .pdf-list li {
+            background: #9b2247;
+            border-radius: 8px;
+            padding: 15px 25px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .pdf-list li:hover {
+            background-color: #611232;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.2);
+        }
+
+        .pdf-link {
+            color: white;
+            font-weight: bold;
+            text-decoration: none;
+            font-size: 1.1rem;
+        }
+
+        /* Aseguramos que el hover afecte al enlace también */
+        .pdf-link:hover {
+            color: #f3c6d1;
+            text-decoration: underline;
+        }
+
+        /* Botón logout estilo similar a los otros botones, con rojo */
+        nav form button {
+            background-color: #9b2247 !important;
+            color: white !important;
+            border-radius: 5px;
+            padding: 8px 15px;
+            font-weight: bold;
+            border: none;
+            transition: background-color 0.3s ease;
+        }
+
+        nav form button:hover {
+            background-color: #611232 !important;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Plataforma de Documentos Oficiales</h1>
+    </header>
+    <nav>
+        {% if user.is_authenticated %}
+            <a href="{% url 'catalog' %}">Catálogo</a>
+            {% if user.is_staff %}
+            <a href="{% url 'upload_pdf' %}">Subir PDF</a>
+            {% endif %}
+            <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit">Cerrar sesión</button>
+            </form>
+        {% else %}
+            <a href="{% url 'login' %}">Iniciar sesión</a>
+        {% endif %}
+        {% if not user.is_authenticated %}
+            <a href="{% url 'register' %}">Registrarse</a>
+        {% endif %}
+    </nav>
+    <div class="container">
+        {% block content %}
+        {% endblock %}
+    </div>
+</body>
+</html>
