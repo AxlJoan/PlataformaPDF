@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="charts-grid">
+  <div class="chart-card">
+    <h3>Documentos más vistos</h3>
+    <canvas id="docsChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <h3>Usuarios más activos</h3>
+    <canvas id="usersChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <h3>Actividad por hora</h3>
+    <canvas id="hoursChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <h3>Vistas vs Descargas</h3>
+    <canvas id="actionsChart"></canvas>
+  </div>
+</div>
+
+<h2>Registros de usuarios</h2>
+<form method="get" style="margin-bottom: 20px;">
+    <input type="text" name="user" placeholder="Buscar usuario" value="{{ user_filter }}">
+    <select name="action">
+        <option value="">Todas las acciones</option>
+        <option value="view" {% if action_filter == "view" %}selected{% endif %}>Visualización</option>
+        <option value="download" {% if action_filter == "download" %}selected{% endif %}>Descarga</option>
+    </select>
+    <button type="submit">Filtrar</button>
+</form>
+
+<table border="1" cellpadding="8" cellspacing="0" style="width:100%; border-collapse: collapse;">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Usuario</th>
+            <th>PDF</th>
+            <th>Acción</th>
+            <th>Fecha y hora</th>
+            <th>Dirección IP</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for log in page_obj %}
+        <tr>
+            <td>{{ log.id }}</td>
+            <td>{{ log.user.username }}</td>
+            <td>{{ log.pdf.title }}</td>
+            <td>{{ log.action }}</td>
+            <td>{{ log.accessed_at }}</td>
+            <td>{{ log.ip_address }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5">No hay registros.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div style="margin-top:20px;">
+    <div class="pagination">
+  {% if page_obj.has_previous %}
+    <a href="?page=1">&laquo; Primera</a>
+    <a href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+  {% endif %}
+
+  {% for num in page_obj.paginator.page_range %}
+    {% if num == page_obj.number %}
+      <strong>{{ num }}</strong>
+    {% elif num >= page_obj.number|add:'-2' and num <= page_obj.number|add:'2' %}
+      <a href="?page={{ num }}">{{ num }}</a>
+    {% endif %}
+  {% endfor %}
+
+  {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}">Siguiente</a>
+    <a href="?page={{ page_obj.paginator.num_pages }}">Última &raquo;</a>
+  {% endif %}
+</div>
+
+</div>
+<h2>Mapa de Ubicaciones</h2>
+<div id="map" style="height: 400px;"></div>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    var map = L.map('map').setView([20.0, 0.0], 2);  // Mapa centrado en el mundo
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Aquí cargarás las ubicaciones desde tu base de datos:
+    var locations = [
+        {% for log in page_obj %}
+        {% if log.latitude and log.longitude %}
+        {
+            lat: {{ log.latitude }},
+            lng: {{ log.longitude }},
+            user: "{{ log.user.username }}",
+            city: "{{ log.city }}",
+            country: "{{ log.country }}",
+            action: "{{ log.action }}",
+            date: "{{ log.accessed_at }}"
+        },
+        {% endif %}
+        {% endfor %}
+    ];
+
+    locations.forEach(function(loc) {
+        L.marker([loc.lat, loc.lng]).addTo(map)
+            .bindPopup(`<b>${loc.user}</b><br>${loc.city}, ${loc.country}<br>Acción: ${loc.action}<br>${loc.date}`);
+    });
+</script>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Documentos más vistos
+new Chart(document.getElementById('docsChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ doc_labels|safe }},
+    datasets: [{ label: 'Vistas', data: {{ doc_data|safe }}, backgroundColor: '#9b2247' }]
+  },
+  options: { responsive: true }
+});
+
+// Usuarios más activos
+new Chart(document.getElementById('usersChart'), {
+  type: 'pie',
+  data: {
+    labels: {{ user_labels|safe }},
+    datasets: [{ label: 'Actividad', data: {{ user_data|safe }}, backgroundColor: ['#611232','#9b2247','#480e24','#551129','#7e1a38'] }]
+  },
+  options: { responsive: true }
+});
+
+// Actividad por hora
+new Chart(document.getElementById('hoursChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ hour_labels|safe }},
+    datasets: [{ label: 'Accesos', data: {{ hour_data|safe }}, backgroundColor: '#611232' }]
+  },
+  options: { responsive: true, scales: { x: { title: { display: true, text: 'Hora del día' } } } }
+});
+
+// Vistas vs Descargas
+new Chart(document.getElementById('actionsChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Vistas', 'Descargas'],
+    datasets: [{ label: 'Acciones', data: {{ action_data|safe }}, backgroundColor: ['#611232','#9b2247'] }]
+  },
+  options: { responsive: true }
+});
+</script>
+
+<canvas id="docsChart"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const ctx = document.getElementById('docsChart').getContext('2d');
+const docsChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: {{ labels|safe }},
+        datasets: [{
+            label: 'Documentos más vistos',
+            data: {{ data|safe }},
+            backgroundColor: 'rgba(153, 102, 255, 0.6)',
+            borderColor: 'rgba(153, 102, 255, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: { beginAtZero: true }
+        }
+    }
+});
+</script>
+
+
+{% endblock %}

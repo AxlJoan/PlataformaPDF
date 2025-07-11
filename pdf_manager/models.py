@@ -13,6 +13,14 @@ class AccessLog(models.Model):
         ('download_attempt', 'Intento de Descarga'),
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    pdf = models.ForeignKey(PDFDocument, on_delete=models.CASCADE)
+    pdf = models.ForeignKey('PDFDocument', on_delete=models.CASCADE)
+    action = models.CharField(max_length=20)  # 'view' o 'download'
     accessed_at = models.DateTimeField(auto_now_add=True)
-    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)  # <-- NUEVO CAMPO
+    country = models.CharField(max_length=100, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    latitude = models.FloatField(blank=True, null=True)
+    longitude = models.FloatField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.user.username} {self.action} {self.pdf.title} at {self.accessed_at}"
